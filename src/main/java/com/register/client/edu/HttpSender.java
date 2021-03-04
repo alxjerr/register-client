@@ -1,7 +1,9 @@
 package com.register.client.edu;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import com.register.client.edu.CachedServiceRegistry.RecentlyChangedServiceInstance;
 
 /**
  * 负责发送各种http请求的组件
@@ -39,12 +41,13 @@ public class HttpSender {
     }
 
     /**
-     * 拉取服务注册表
+     * 全量拉取服务注册表
      * @return
      */
-    public Map<String,Map<String,ServiceInstance>> fetchServiceRegistry(){
-        Map<String,Map<String,ServiceInstance>> registry =
+    public Applications fetchFullRegistry(){
+        Map<String,Map<String, ServiceInstance>> registry =
                 new HashMap<String, Map<String, ServiceInstance>>();
+
         ServiceInstance serviceInstance = new ServiceInstance();
         serviceInstance.setIp("192.168.11.1");
         serviceInstance.setPort(9000);
@@ -53,11 +56,35 @@ public class HttpSender {
 
         Map<String,ServiceInstance> serviceInstances = new HashMap<String, ServiceInstance>();
         serviceInstances.put("FINANCE-SERVICE-192.168.11.1:9000",serviceInstance);
-
         registry.put("FINANCE-SERVICE",serviceInstances);
         System.out.println("拉取注册表：" + registry);
 
-        return registry;
+        return new Applications(registry);
+    }
+
+    /**
+     * 增量拉取服务注册表
+     * @return
+     */
+    public DeltaRegistry fetchDeltaRegistry(){
+        LinkedList<RecentlyChangedServiceInstance> recentlyChangedQueue =
+                new LinkedList<RecentlyChangedServiceInstance>();
+
+        ServiceInstance serviceInstance = new ServiceInstance();
+        serviceInstance.setIp("192.168.11.1");
+        serviceInstance.setPort(9000);
+        serviceInstance.setServiceInstanceId("FINANCE-SERVICE-192.168.11.1:9000");
+        serviceInstance.setServiceName("FINANCE-SERVICE");
+
+        RecentlyChangedServiceInstance recentlyChangedItem = new RecentlyChangedServiceInstance(
+                serviceInstance,
+                System.currentTimeMillis(),
+                "register");
+        recentlyChangedQueue.addLast(recentlyChangedItem);
+        System.out.println("拉取增量注册表：" + recentlyChangedQueue);
+
+        DeltaRegistry deltaRegistry = new DeltaRegistry(recentlyChangedQueue,2L);
+        return deltaRegistry;
     }
 
     /**
